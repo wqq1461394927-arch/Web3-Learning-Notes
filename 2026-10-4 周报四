@@ -1,0 +1,184 @@
+一                 粉丝多的大账号随便发一两句话，就能拿到大量点赞/曝光；普通人认认真真写长内容却没流量
+
+我认为根本不是“为什么他们随便发都火”，而是“普通人没有粉丝基础，怎么让帖子被更多人看到”。
+
+我自己试了一段时间，总结出三个普通人破局的处理点：
+
+第一，有情绪。夸张、震惊、暴富，能让人立刻有反应。
+第二，有认同感。比如“你穷是因为你不懂”，直接站队。
+第三，有争议。评论区能吵起来，算法就拼命推。
+
+而认真写的东西往往太客观、太克制、太全面，什么都说到了，反而什么都不突出。
+
+说白了，普通人做流量，不是靠“我写得多好”，而是靠“我怎么让平台愿意推、让读者愿意停”。内容还是那个内容，换层壳而已。
+
+你们刷到那种“吹牛逼”的帖子，会点进去看吗？还是直接划走？我想看看大家真实的反应，也确认一下是不是只有我在纠结。
+
+
+
+
+
+
+二                  最近刷了很多AI漫剧，发现一个很明显的问题：不少作品里人物的空间关系是乱的。A 该站在 B 后面、C 前面，实际画面里前后错位，看着特别扭曲。还有主角脸型或模型突然就换了，上一秒一个人，下一秒变另一个人。说话声音也是，一会儿深沉，一会儿又清扬，连贯性很差。
+
+但奇怪的是，这些漫剧的收藏量和浏览量很多都是几十万，甚至几百万。说明观众对这类内容的需求很大，只是目前制作上的瑕疵确实影响观感。
+
+我就在想，能不能专门做一个工具或小插件，专门解决 AI 漫剧的这些瑕疵？不一定要做成大项目，先做个插件，让创作者在生成时就能减少这类问题，比如人物位置错乱、角色一致性、音色稳定这些。
+
+结合网友的评论实际上真正要解决的并不是技术问题而是有没有人愿意来购买。我个人的看法是有人会愿意这一项技术来付钱的， 因为我发现有的漫剧的质量相对于大部分漫剧的质量都提高了好几个档次并且收藏人数或者说点赞人数在百万，有一种想要把那种漫剧作为珍藏型的漫剧。所以我认为这项技术具有潜力。
+
+
+
+三                    针对之前说的关于漫剧出现的人物错位以及人物脸部以及其他地方的形象瑕疵。进行创作一个小项目或小插件来解决的这个想法，我想要利用大模型来制作一个小小的简单的演示过程，向推特上面的人展示一下。
+
+
+
+1          最近在看哪些项目已经实质性停止运营。总结了几条判断标准：1. 官网无法访问；2. 推特超过半年无更新；3. 社群无人维护。大家手里有这种列表吗？一起避坑👇”
+
+
+
+
+
+2        以前觉得推特没法带来实际性的帮助，但是后面发现可以在推特上浏览一些信息，将不懂的信息投喂给AI，让AI帮你解释，然后你感兴趣的话可以让A帮你I深入的挖掘一手信息或精品的二手信息，这样自己可以迅速的了解这种知识，然后进一步的话，可以让他给你一些具体的操作步骤，自己去做，然后会了解更多，深入学习更多。接触面更广。这大大打破了认知局限。  虽然上面的好处有那么多，但这并不意味着你就一定能够做到，更关键在于你去执行。
+
+
+
+
+3           之前在学校按照老师所讲的已经给的那些文件进行合约的代码敲打或者项目的跑通测试等等。遇到的一些溢出类问题，然后让AI帮我整理了一些问题且分类好，并且以及对应的实施方法来分享。
+智能合约溢出分类 + 解决方案（分享精简版）
+ 
+3.1、整数上溢 Overflow
+ 
+含义：数值超过变量存储上限，数值回滚到最小值
+解决：Solidity0.8及以上（自带溢出校验）；0.8以下引入SafeMath库
+ 
+3.2、整数下溢 Underflow
+ 
+含义：无符号整数减到小于0，数值跳转为极大值
+解决：同上，边界值校验，避免余额在0时继续扣减
+ 
+3.3、栈溢出 Stack Overflow
+ 
+含义：合约递归/跨合约调用层数超过EVM上限（1024层）
+解决：减少深度递归；拆分合约，降低调用嵌套层级
+ 
+3.4、内存溢出 Memory Overflow
+ 
+含义：读写内存超出预先分配的内存空间
+解决：严格控制memory读写范围，校验数据长度
+ 
+备注：溢出属于合约/EVM代码问题，与Ubuntu/Linux部署环境无关
+ 
+
+
+
+
+4 读了https://news.qiniu.com/archives/1788402840349#1 其中有一点给我的印象很深刻，那就是尽管给ai 不断的加提示词，不断的强调限制，但总会超过所给他的那些约束。 它间接说这个Harness约束“大框架”是能很好解决这个问题。
+
+
+
+
+
+四            同一个模型，放进两个不同的 Harness 里：一个在 40 步后自动停下，另一个跑到 300 步都不肯停。推理没变，答案一样，改变的只是那层被大多数人忽略的“壳”。
+ 
+Agent 的安全和边界，从来不在模型本身。
+ 
+你更信任模型的能力，还是 Harness 的约束？
+ 
+ 
+ 
+🔍 什么是 Harness？
+它是 Agent 的治理和托管平台（连接器是 Agent 接入平台的适配器，编码代理是 Agent 的一种具体类型）。它负责调用工具、处理多步骤任务，并持续运行直至任务完成。
+ 
+📊 数据背后的真相：
+Harness 在 Agent 系统中的占比，远超大多数人的直觉。
+ 
+MBZUAI（艾姆 比 优 诶 爱） 的 VILA（维勒） 实验室在 2026 年 4 月发表的论文《Dive into Claude（克洛德） Code》中，分析了 Claude（克洛德） Code v2.1.88 版本（因 Anthropic 误将源映射包发布到 npm 而短暂曝光）的源码，得出一个惊人的结论：
+👉 在 1,884 个文件、约 51.2 万行代码中，98.4% 属于 Harness 基础设施（权限、上下文管理、沙箱、工具路由、恢复机制），真正涉及 AI 决策逻辑的仅占 1.6%。
+ 
+🧪 微软的失控测试：
+微软人工智能首席架构师 Aqib Sherwani（阿奇布 舍瓦尼） 对比了 Agent Framework 和 GitHub Copilot（扣派勒特） SDK（艾斯迪凯）。测试结论概括为“推理相同，工程实现不同”——两者在相同步数内得出相同答案，差异仅存在于运行时的安全防护。
+关闭主机端停止控制后，Agent Framework 在约 40 次循环后自动终止，而 Copilot（扣派勒特） SDK（艾斯迪凯）跑到了 300 次都不肯停。
+ 
+📌 结论：
+“占比高”不仅指代码行数多，更指它对 Agent 最终行为和安全边界的决定性影响。
+Agent 的下半场，拼的不是模型，而是工程。
+ 
+来源：https://www.infoq.cn/article/aDEJegvNSKwvue2JZ0yI
+
+
+
+
+
+
+
+
+五        Chainalysis报告：区块链死信投递（BDD）整理
+
+核心定义：Chainalysis把"网络威胁行为者利用公共区块链隐藏恶意软件指令、使其几乎无法被查获或关停"这类攻击技术，统称为区块链死信投递（Blockchain Dead Drops，BDD）。EtherHiding是其中一种具体形式，指攻击者把恶意软件的命令与控制（C2）数据存进智能合约里。
+
+数据和驱动因素：自2025年年中以来，链上恶意写入活动激增约440%。原文把这个增长跟"对生成恶意代码没有限制的中国开源大模型发布"联系在一起，2026年Q2这个趋势尤其明显。但需要说明的是，Chainalysis自己的研究员明确表示，他们只是发现了AI模型发布和攻击增长之间存在"明确的时间点关联"，没有确凿证据证明攻击者真的用了这些AI模型来提高产出——这是相关性，不是已被证实的因果关系。
+
+参与者结构的变化：早期主要是网络犯罪分子在使用BDD技术，后来国家层面的行为者开始介入，使得攻击技术更先进、攻击次数更多，国家关联行为者目前占到了整体活动的近一半。不过报告也特别说明，这些归因判断来自Chainalysis自己的研究，应被当作该公司的评估结论，而不是被独立证实的事实。
+
+攻击     两大存储类别：
+
+基于交易的存储：攻击者利用区块链交易本身发布C2配置、载荷引用或基础设施指针，可以在单条链上或跨多条链进行
+基于合约的存储：攻击者把智能合约作为存储位置（EtherHiding就是这一类的代表），恶意软件从合约的可读数据里获取更新信息，链上痕迹通常只有合约的创建和更新记录
+
+此外还有更轻量的变体，比如利用"幽灵钱包"——没有私钥对的地址——把C2服务器的IP地址藏进地址的字节里，而不是藏进交易或合约本身。
+
+三个案例，用的是三种不同的具体手法，不是同一种技术各自升级：
+
+朝鲜（UNC5342，谷歌威胁情报小组追踪）：2025年2月开始在公共区块链上使用智能合约，还用了一种此前未被识别过的基于交易的技术
+伊朗（疑似与情报部门有关）：利用比特币的OP_RETURN字段存储编码后的C2路由数据，好处是参考地址跟攻击者没有直接关联，且更换基础设施很容易
+俄语犯罪团伙：把BDD技术嵌入Polygon智能合约，并且在俄语犯罪论坛上把这套技术打包成"恶意软件即服务"工具包售卖——链上分析显示，部署者钱包还跟仿冒稳定币代币、剪贴板劫持活动、50多个几乎相同的币安智能链解析合约关联，这些都指向同一个运营者。
+
+防御层面的结论：公共区块链成本低、极难被关停，这两个特性存在一天，BDD技术就会持续被威胁行为者采用。防御方没法靠简单拦截"区块链流量"来应对——因为这会连带封锁大量合法的钱包、DeFi服务。但区块链本身的不可篡改性，也让这些行为具有独特的可观察性，区块链情报分析反而能用来加强防御。
+
+
+
+
+
+
+
+
+
+
+
+
+
+六                          Most polished academic posts get ignored.
+I’m a blockchain student, and I joined Anthropic’s AI user research interview.
+The core topic: Can a beginner use AI to join professional Web3 debates?
+ 
+Interview Q&A:
+Q: Hello! I'm an AI interviewer from Anthropic. As AI is becoming more capable and more consequential, we want to hear how it’s showing up in your life.
+A: AI appears in many aspects of my life, such as cooking. When I prepare dishes, it can help me figure out how to use different ingredients and teach me the basic ways to process them, so that the food tastes better.
+ 
+It also offers great help for my study. Based on my existing knowledge, it can inspire new ideas. It can also guide me to learn knowledge I have not touched before. When discussing questions, its opinions are worth referencing. Though AI’s answers are not 100% accurate, it helps me a lot to a large extent.
+ 
+Q: To set the scene a bit more concretely: what’s the last thing you used AI for?
+A: Last time I used AI to sort out the regulatory frameworks of global cryptocurrencies and articles related to the Web3 industry. As a new learner, it helps me gain a deeper understanding of knowledge in this field.
+ 
+Q: Now I'd like to hear about a particular experience. Can you tell me about your most memorable moment with AI?
+A: My most memorable moment was discussing protocols and the fat protocol theory with others on Twitter. We centered our conversation around three core questions.
+First, if South Korea’s tokenized securities framework works, will other major markets follow this model or build entirely different tokenization architectures?
+Second, will interoperability become a real bottleneck as tokenized finance expands in scale?
+Third, even if interoperability becomes indispensable, will the interoperability layer necessarily capture economic value?
+ 
+We also drew an analogy to the early Internet. The core internet protocols were essential, yet they did not capture most of the profits. We debated whether tokenized finance would follow a similar path.
+ 
+During this discussion, I learned a great deal of new knowledge, much of which I had not mastered before. I used AI to gather and filter relevant materials, and applied insights from those materials to this conversation.
+ 
+Q: What was it about that experience that has stayed with you?
+A: What stuck with me is that AI sorted out scattered, high-bar industry materials. It allowed me, as a new learner, to join this professional in-depth debate.
+Before the discussion, many concepts were unclear to me. AI helped me quickly fill gaps in my knowledge and organize different viewpoints.
+I was no longer only passively reading information. Instead, I could think independently and discuss professional topics on an equal footing with others.
+I also learned about AI’s limits. I still need to check and verify the information it provides, and cannot fully trust everything it outputs.
+ 
+Q: Beyond that, is there another time AI made something better, for you or for people around you? It's fine if not.
+A: Yes. I use AI when I cook at home. It helps me identify different ingredients and learn how to pre-process them, so I can make tastier dishes. For me, AI lowers the barrier to learning cooking skills.
+ 
+🤔 Your view: Is AI a real equalizer for Web3 newbies, or just a trap if you skip fact-checking?
+#Web3 #AI #TokenizedFinance #BlockchainStudent
