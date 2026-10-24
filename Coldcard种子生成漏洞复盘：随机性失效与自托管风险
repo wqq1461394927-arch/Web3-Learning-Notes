@@ -1,0 +1,173 @@
+
+ 
+撰文：blockmaple
+资料截点：链上损失与归因统计截至2026年9月11日；技术与迁移指引依据Coinkite官方页面，于2026年10月10日复核（官方状态页标注核验日期为2026年10月1日）。
+
+2026年7月30日，比特币硬件钱包Coldcard被曝出一处潜伏五年的种子生成缺陷。攻击者可离线枚举受影响的弱种子并派生相应私钥，无需接触设备。更新固件无法修复已经生成的受影响种子，相关用户仍需迁移资产。Galaxy Research在8月14日以高置信度统计，约1,778.84 BTC从超过8,600个地址被盗 [8]。本文梳理这次事件的技术机制和损失统计的演变，并借助对照案例区分不同风险及制造商责任的适用边界。
+
+
+核心要点
+
+1. 随机源缺陷与影响范围。2021年3月libNgU库迁移中引入的构建/链接缺陷，使受影响固件的种子生成调用链使用了MicroPython内置的非密码学伪随机数生成器，而不是设备的硬件随机数生成器 [2]。Mk2/Mk3受影响更严重；Mk4/Mk5/Q在伪随机数状态中额外混入了安全芯片的随机值，影响相对较轻，但仍在受影响范围内 [1][2]。Coinkite在特定攻击假设下的初步估算是：Mk2/Mk3有效搜索空间约40位，Mk4/Mk5/Q约72位，设计目标为128位；两者都是估算值，不是固定的破解成本 [2]。
+
+2. 更新固件无法修复已经生成的受影响种子。受影响用户应在修复版固件上生成全新种子并迁移资金；官方只对手动混入足量骰子投掷的种子给出了一条条件严格的例外（见第四节）[1][5]。
+
+3. 损失统计有不同置信度。确认损失与疑似损失需要分开看，不同机构、不同日期的口径不宜直接相加或比较，演变过程见第二节 [8][10]。
+
+
+一、漏洞怎么来的
+ 
+【Coldcard 随机源调用链：缺陷与修复（示意图）——文字版】
+
+━━━ 受影响固件的随机源调用链（Mk2/Mk3：固件 4.0.1—4.1.9）━━━
+
+① 2021年3月 libNgU 库迁移
+↓
+② 宏 MICROPY_HW_ENABLE_RNG 设为 0；libNgU 的编译期检查只判断该宏是否被定义，未判断其值
+↓
+③ 种子生成调用的 rng_get() 被链接到 Micro Python 内置 Yasamarang 非密码学伪随机数生成器（而非板级硬件 TRNG）
+↓
+④ 该 PRNG 的初始状态主要来自设备标识与计时信息
+
+种子熵远低于设计目标 128 位：Mk2/Mk3 有效搜索空间约 40 位；Mk4/Mk5/Q 因在 PRNG 状态中额外混入安全芯片（SE1、SE2）随机值约 72 位——攻击者可离线枚举候选种子并派生相应私钥，无需接触设备
+
+━━━ 修复后（Mk2/Mk3 自固件 4.2.0 起修正新种子生成）━━━
+
+① 从构建中排除 MicroPython 的备用 PRNG 目标文件
+↓
+② 新增构建期随机源符号检查：只有板级目标文件定义了全局 rng_get() 符号、而上游备用目标文件未定义任何符号时，构建才能通过
+↓
+③ 新种子生成恢复使用板级硬件 TRNG，回到 128 位熵的设计目标
+
+注：示意图依据 Coinkite 官方技术说明绘制；约 40 位 / 约 72 位为 Coinkite 在特定攻击假设下的初步估算，不是精确、通用的破解成本。
+
+（图：Coldcard 随机源调用链示意，作者自制；技术标签依据 Coinkite 官方技术说明 [2][6]）
+
+
+Coldcard硬件钱包由加拿大公司Coinkite制造。在2021年3月的libNgU库迁移中，种子生成调用的rng_get()被解析到MicroPython内置的Yasmarang非密码学伪随机数生成器（PRNG），而不是Coldcard原本打算使用的、针对具体电路板的硬件真随机数生成器（TRNG）[2][3]。Coinkite把相关配置宏MICROPY_HW_ENABLE_RNG设为0，本意是关闭MicroPython自带的随机数路径，因为Coldcard另有自己的硬件随机数实现；但libNgU中的编译期检查只判断该宏是否被定义，没有判断它的值，未能阻止错误实现进入种子生成调用链，编译因此顺利通过 [2][6]。
+
+Coinkite称，这是构建和链接环节的集成缺陷，不是运行时硬件随机数生成器失效后的降级，也不是有意设计的后备方案 [2][3]。需要说明的是，出问题的是这一个非密码学PRNG及其低熵初始化，不能由此推出所有伪随机数生成器都不安全；密码学安全的伪随机数生成器是另一类设计。
+
+在Mk2/Mk3上，这个PRNG的初始状态主要来自设备标识和计时信息 [2][6]。熵指随机性的不可预测程度，设计目标是128位；Coinkite在当前攻击假设下估计Mk2/Mk3的有效搜索空间约为40位，攻击者因此可以离线枚举候选种子并派生相应私钥，无需接触设备 [2]。PRNG的输出参与生成钱包种子，再由种子派生私钥，所以种子被压缩到的范围，就是私钥可被穷举的范围。Mk4/Mk5/Q在PRNG状态中额外混入了两颗安全芯片（SE1、SE2）的随机值，因此厂商估计的有效搜索空间较高，约72位；但这些型号后续仍从同一个MicroPython PRNG获取大部分随机数，仍在受影响范围内 [2]。两组数字都是Coinkite的初步估算，会随分析推进而变化，不是精确、通用的破解成本。
+
+2026年7月30日出现公开盗币报告后，研究人员展开调查并披露了问题，Coinkite同日发布安全公告 [1][6]。Block工程团队的分析追溯到v4.0.0的源码谱系；Coinkite说明，v4.0.0未作为公开签名固件发行，该系列首个公开签名版本是v4.0.1，因此Mk2/Mk3的受影响固件范围是4.0.1至4.1.9，4.2.0起修正新种子的生成 [1][3]。
+
+Coinkite的修复排除了MicroPython的备用PRNG目标文件，并增加了构建期的随机源符号检查：只有板级目标文件定义了全局rng_get()符号、而上游备用目标文件不定义任何符号时，构建才能通过 [2]。
+
+
+二、损失统计：不同口径，不能直接相加
+8月14日的高置信度统计约为1,778.84 BTC，9月7日计入新增疑似受害地址后的累计损失估计约为1,806 BTC；二者统计条件不同，下表按日期列出各口径。
+
+损失统计时间线（不同口径，不能直接相加）
+
+● 7月30日（TechTimes于7月31日报道）
+来源：TechTimes [11]；金额据TRM [7]
+金额：约594 BTC
+统计条件：约25分钟内的一轮转移，截至7月30日21:56（美东夏令时EDT，北京时间7月31日09:56）；报道表述为约500个“钱包”，不宜直接与后续的地址数比较
+──────────────────────────
+● 8月5日
+来源：TRM Labs [7]，援引Galaxy Research当时的累计统计
+金额：约1,816 BTC（约1.16亿美元）
+统计条件：初步统计，5,200余个地址、四波；TRM提示规模仍可能变化，第四波当时仍在内存池中
+──────────────────────────
+● 8月14日
+来源：Galaxy Research [8]
+金额：约1,778.84 BTC（约1.127亿美元）
+统计条件：高置信度，超过8,600个地址；与8月5日的初步统计口径不同，不宜直接比较
+──────────────────────────
+● 8月24日
+来源：Alex Thorn（Galaxy研究负责人）本人在X平台发布，经The Crypto Times转述 [9]
+金额：约1,789.28 BTC（事发时约1.147亿美元）
+统计条件：8,865个地址；若计入尚未确认的中等置信度地址，总量约1,824 BTC（约1.4亿美元）
+──────────────────────────
+● 9月7日
+来源：The Block转述Galaxy的跟踪 [10]
+金额：累计损失估计约1,806 BTC
+统计条件：计入新识别的疑似受害地址，不是定案值；第三波被盗资金中约45%已被攻击者转移
+──────────────────────────
+注：钱包、地址、交易和受害者是不同的统计单位，不能互相替换：8,600余个地址不等于8,600余名受害者。表中的美元数额随币价变动，仅作参考。
+
+
+钱包、地址、交易和受害者是不同的统计单位，不能互相替换：8,600余个地址不等于8,600余名受害者。表中的美元数额随币价变动，仅作参考。
+
+
+三、资金去了哪里，归因进展如何
+
+据TRM 8月5日的报告，被盗资金大多集中在少数由攻击者控制的地址；其追踪到的洗转动作当时仅有一笔64.9 BTC存入Wasabi（一种CoinJoin隐私工具），以及8月4日一笔200 ETH存入Tornado Cash。报告没有说明BTC与ETH之间的转换路径，本文也未补充 [7]。Galaxy 8月14日的报告记录，在已确认被盗的至少1,778 BTC中，约1,531 BTC仍在攻击者控制的地址内未动；约246 BTC在被盗后发生移动，其中约65%进入CoinJoin（多人联合构造交易的隐私技术，不应把它的一切使用都等同于洗钱），其余约35%继续向前转移，部分走剥离链路径 [8]。上述均为对应报告时点的追踪结果。
+
+TRM在8月5日的报告中没有指认具体主体，认为各波次交易构造的差异提示可能有多个攻击者 [7]。Galaxy在8月14日的报告中以高置信度判断有多个攻击者活跃，但无法确认各波次、各攻击痕迹分别由同一主体还是不同主体实施 [8]。
+
+
+四、受影响用户该怎么办
+
+判断一枚种子是否受影响，要看它生成时所用的型号和固件，而不是购买日期或当前固件版本 [5]。官方列出的受影响范围是：Mk2/Mk3在4.0.1至4.1.9固件上生成的种子；Mk4/Mk5在标准版5.6.0之前、Edge版6.6.0X之前生成的种子；Q在标准版1.5.0Q之前、Edge版6.6.0QX之前生成的种子 [1][5]。在受影响固件上生成过种子的钱包，应按“可能已被破解”处理（官方对手动混入足量骰子投掷的种子给出了一条例外，条件见下文）。外部安全生成后仅导入设备的种子，不会因导入这个动作而变弱；但由受影响的Coldcard生成的种子，即使后来导入其他设备，风险依然存在 [5]。无法确定种子的生成方式时，按官方迁移指南处理。
+
+最低修复版本因型号和发布分支而异：Mk2/Mk3为4.2.0；Mk4/Mk5标准版为5.6.0，Edge版为6.6.0X；Q标准版为1.5.0Q，Edge版为6.6.0QX [1][4]。Mk2/Mk3的4.0.1至4.1.9属于受影响固件，不是修复版本。最低修复版本与当前推荐版本是两回事：官方状态页（2026年10月1日核验）将当前标准版推荐为Mk4/Mk5 5.6.3、Q 1.5.3Q，本文复核时以此为准，读者请以官方页面当天显示为准 [4]。标准版和Edge版是两个不同的发布分支，不能按版本号大小跨分支判断是否已修复 [1]。
+
+迁移的基本原则是：在已安装修复版固件的设备上生成全新种子，验证后再转移资金，更新固件本身不会改变或修复旧种子 [5]。有第二台已安装修复版固件的Coldcard时，应优先用它生成并验证新钱包，这样不必在同一台设备上反复恢复新旧种子。只有一台设备时，官方给出的路径如下，完整步骤以官方迁移指南为准 [5]：
+1. 确认旧种子的备份可以正常恢复，并记录旧钱包的钱包指纹。
+2. 核验固件的SHA-256哈希和签名文件，安装对应型号和发布分支的修复版固件，并在设备上确认版本。
+3. 确认旧钱包可恢复后，清除设备内的旧种子，生成全新种子；记录并验证新种子的备份、钱包指纹，并在设备屏幕上核对一个接收地址。
+4. 恢复旧种子，确认指纹，向已核验的新地址发送一笔小额测试。
+5. 恢复新种子，确认指纹，并确认测试款已到账。
+6. 再次恢复旧种子，确认指纹，迁移剩余余额。
+7. 最后恢复新种子，确认全部余额到账。全程保留旧备份，直到所有余额到账确认。
+
+任何一步指纹或地址对不上，就应停下，不要发送资金，也不要清除任何一份备份。接收地址必须在设备屏幕上核验，钱包指纹不能代替对接收地址的核验。
+
+迁移时还要清点所有实际持有余额的派生钱包：基础钱包、各个账户和地址类型、passphrase钱包、BIP-85子钱包（由主种子派生出的独立子种子），以及使用该种子的多重签名策略 [5]。同一个passphrase在新种子下会得到另一个钱包，需要重新核对指纹。
+
+骰子例外。官方说明，如果生成种子时通过Add Dice Rolls功能混入了至少50次公平、独立、私密的骰子投掷，投掷序列没有被记录或泄露，并且使用的是加入骰子之后设备显示的最终助记词，那么官方不认为该种子仅因这次RNG问题而处于风险中；50至98次合格投掷至少贡献128位熵，99次及以上约256位 [1][5]。次数不足、条件存疑，或记不清用了哪一组助记词的，应按需要迁移处理。这条例外只针对这一具体问题，不能推广为所有骰子建钱包流程的通用规则，也不是对种子的全面安全保证。
+
+passphrase。如果资产原本就存放在一个强且唯一的BIP-39 passphrase对应的钱包中，攻击者还需要发现或猜中这个口令才能动用其中的资金，但官方仍建议这类用户尽快迁移，因为passphrase无法修复受影响的种子 [1][5]。短、常见、有规律或被重复使用的口令可能被猜中，应按有风险处理。事后在设备上新增passphrase，只会生成另一个全新的钱包，不会保护原钱包里的余额。这里说的是BIP-39 passphrase，不是设备PIN。
+
+
+五、对照案例：订单数据泄露与芯片实验室漏洞
+
+硬件钱包风险涉及种子生成、供应商数据保护与芯片安全，三者的攻击条件和后果不同。本文另选取Ledger与Trezor两个案例作对照，并非穷尽2026年的相关事件。
+
+Ledger案：据The Block 1月5日报道，Ledger确认接到通知，第三方跨境电商服务商Global-e的系统发生了涉及订单数据的未授权访问，其中包括部分Ledger.com购买订单的客户数据；泄露的信息包括客户姓名和联系方式，受影响人数当时未披露 [12]。Ledger发言人称，Ledger自身的平台、硬件和软件未被攻破，Global-e无法接触用户的24个助记词、区块链余额等与数字资产相关的机密，支付信息也未受影响，以上均为Ledger的说明 [12]。这类信息泄露的主要风险在于隐私暴露，以及可能被用于针对性钓鱼。
+
+需要补充的是，Ledger在2026年还有第二起性质不同、更严重的事件：10月9日The Block等媒体报道，Ledger正在调查东南亚授权经销商CryptoBilis相关的用户资金被盗，链上分析师Specter追踪到超过8,600万美元资金从数百个钱包（涉及BTC、ETH、TRON）被转走；Ledger已要求CryptoBilis暂停销售和发货，并提醒90天内从该经销商购买过设备的用户先不要启用。截至本文复核时，具体攻击机制尚未确认，官方和独立媒体均未将其定性为已证实的硬件漏洞或供应链攻击，损失数字也未经独立核实 [18]。与1月的Global-e事件相比，这起事件如果属实涉及真实资金损失，性质更接近Coldcard而非单纯的数据泄露，本文暂不将其计入下文的三类对照，留待机制确认后再评估。
+
+Trezor案：2026年6月3日，Trezor与芯片供应商Tropic Square同日分别发布公告，披露Trezor Safe 7所用TROPIC01安全芯片的一处漏洞 [13][14]。起因是Tropic Square向Ledger旗下研究团队Donjon提供芯片样品做独立审计；2026年1月下旬，Donjon通报其通过激光故障注入攻击绕过了固件签名验证，Tropic Square随后扩展分析，找到了进一步的利用路径 [13][14]。利用这个漏洞需要物理持有设备、对芯片做背面开封，并使用激光故障注入等专业实验室设备；Tropic Square给出的CVSS 3.1基础评分为5.7（中等），并称没有证据显示该漏洞在真实环境中被利用 [14]。据Trezor对Safe 7的说明，攻击读出的是芯片保护的部分秘密数据，不等同于比特币私钥或恢复词；该型号的私钥及钱包备份不存放在TROPIC01芯片中，单独攻破这颗芯片不足以获取PIN或资金 [13]。这是厂商的说明，不能据此推出整机不存在任何其他攻击路径。
+
+这三个案例对应不同的风险层级：订单数据泄露增加隐私与钓鱼风险，芯片漏洞需结合攻击条件和整机防护判断，而弱种子直接危及密钥安全。
+
+
+六、监管覆盖与制造商责任边界
+
+《加密资产市场监管条例》（MiCA）序言第83段提到，仅提供非托管钱包的硬件或软件的提供者，不属于其规制的加密资产服务提供者范围 [15]。但序言是对立法目的的说明，具体适用仍要结合厂商实际提供的业务判断，不能一概而论。
+
+《数字运营韧性法》（DORA）面向金融业，要求金融实体管理其信息与通信技术（ICT）风险。它涉及三个层次：金融实体自身的DORA义务；金融实体对其ICT第三方服务商的合同与风险管理要求（第28至30条）；以及被指定为关键ICT第三方服务商之后适用的直接监督（第31条起）[16][17]。这些机制的适用，以向受监管金融实体提供服务等条件为前提，不能仅因一家厂商提供硬件或固件更新，就推出面向个人销售钱包的厂商自动承担同等义务。
+仅从MiCA和DORA的适用范围，不能判断厂商是否承担赔偿责任。要讨论赔偿，还需要另行核实适用地区、合同关系、产品责任及消费者保护规则；本文没有比较各地的判例与合同条款，因此不对这一问题下结论。
+
+
+结语
+
+这次事件的直接教训是：随机源的验证不能停留在源码层面，还应覆盖最终发布的二进制中，从种子生成到随机源的完整调用链。Coinkite的技术说明承认，此前的审查确认了预期的TRNG实现存在于固件二进制里，但没有验证种子生成路径实际到达的是哪一个rng_get()实现 [2]。这不代表所有漏洞都能在发布前被找到，发布后的持续审计、负责任的漏洞披露机制和迁移预案同样必要。
+
+本文认为，自托管把密钥管理的责任交给了用户，但用户仍依赖钱包厂商正确实现密钥生成。设备隔离、随机源验证和可执行的迁移流程，必须共同构成安全保障。以上是基于本文案例的作者分析，并非监管机构或行业已确认的统一标准。
+
+
+来源参考
+
+[1] Coinkite，《Coldcard Security Advisory》，2026-07-30发布（页面标注当前指引更新于2026-08-14），https://blog.coinkite.com/coldcard-mk3-seed-generation-warning/，访问日期：2026-10-10。
+[2] Coinkite，《Technical Deep Dive into the Entropy Issue》，2026-07-30发布（页面标注当前指引更新于2026-08-14），https://blog.coinkite.com/entropy-technical-backgrounder/，访问日期：2026-10-10。
+[3] Coinkite，《COLDCARD Security Disclosure History》，最后更新2026-08-20，https://coinkite.com/historical-disclosures，访问日期：2026-10-10。
+[4] COLDCARD（Coinkite），《Current COLDCARD Security Status》，2026-10-01更新，https://coldcard.com/security/status，访问日期：2026-10-10。
+[5] COLDCARD（Coinkite），《Migrate an Affected COLDCARD Seed》，2026-08-30最后审阅，https://coldcard.com/security/migrate，访问日期：2026-10-10。
+[6] Block Bitcoin Engineering and Security（Block工程团队），《Predictable RNG Fallback and 32-Bit Reseed in COLDCARD Firmware》，2026-07-30，https://engineering.block.xyz/blog/predictable-rng-fallback-and-32-bit-reseed-in-coldcard-firmware，访问日期：2026-10-10。
+[7] TRM Labs，《The Largest Hardware Wallet Exploit of 2026: Inside the USD 116 Million Coldcard Hack》，2026-08-05，https://www.trmlabs.com/resources/blog/the-largest-hardware-wallet-exploit-of-2026-inside-the-usd-116-million-coldcard-hack，访问日期：2026-10-10。
+[8] Galaxy Research（作者：Alex Thorn），《Coldcard Exploit Abates as Total Losses Climb to (at Least) 1,700 BTC》，2026-08-14，https://www.galaxy.com/insights/research/coldcard-exploit-abates-as-total-losses-climb-to-at-least-1700-btc，访问日期：2026-10-10。
+[9] Alex Thorn（Galaxy研究负责人），X平台原帖，2026-08-24 11:38 AM，https://x.com/intangiblecoins/status/2091852664388600079；另见The Crypto Times转述报道《Galaxy Finds $115M Lost in Coldcard Exploit Across 8,865 Addresses》，2026-08-24，https://www.cryptotimes.io/2026/08/24/galaxy-finds-115m-lost-in-coldcard-exploit-across-8865-addresses/，访问日期：2026-10-11。
+[10] The Block，《Coldcard exploiter moves 45% of funds stolen from Wave 3 attacks, Galaxy says》，2026-09-07，https://www.theblock.co/news/defi/2026-09-07-coldcard-exploiter-moves-wave-3-413661，访问日期：2026-10-11。
+[11] TechTimes，《Coldcard Hardware Wallet Hacked via Firmware Bug That Bypassed RNG for Five Years》，2026-07-31，https://www.techtimes.com/articles/322392/20260731/coldcard-hardware-wallet-hacked-via-firmware-bug-that-bypassed-rng-five-years.htm，访问日期：2026-10-11。
+[12] The Block，《Ledger customers alerted to data leak at third-party e-commerce partner Global-e》，2026-01-05，https://www.theblock.co/news/business/2026-01-05-ledger-customers-data-leak-payment-processor-384275，访问日期：2026-10-10。
+[13] Trezor，《Trezor response: TROPIC01 chip disclosure (no impact to your funds)》，2026-06-03，https://trezor.io/blog/news/Trezor-response-TROPIC01-chip-disclosure-no-impact-to-your-funds，访问日期：2026-10-10。
+[14] Tropic Square，《TROPIC01 Security Advisory: LFI Vulnerability Disclosure and Mitigation》，2026-06-03，https://www.tropicsquare.com/news-and-events/tropic01-security-advisory-lfi-vulnerability-disclosure-and-mitigation，访问日期：2026-10-10。
+[15] 欧盟，《加密资产市场监管条例》（Regulation (EU) 2023/1114，MiCA），序言第83段，https://eur-lex.europa.eu/eli/reg/2023/1114/oj，访问日期：2026-10-11。
+[16] 欧盟，《数字运营韧性法》（Regulation (EU) 2022/2554，DORA），第2条、第3(21)条及第28—31条，https://eur-lex.europa.eu/eli/reg/2022/2554/oj，访问日期：2026-10-11。
+[17] 欧洲银行管理局（EBA），《Digital Operational Resilience Act》监督说明页面，https://www.eba.europa.eu/activities/direct-supervision-and-oversight/digital-operational-resilience-act/dora-oversight，访问日期：2026-10-11。
+[18] The Block，《Ledger investigates wallet drains involving CryptoBilis buyers; estimate tops $86 million in losses》，2026-10-09，https://www.theblock.co/news/business/2026-10-09-ledger-cryptobilis-fund-losses-418163，访问日期：2026-10-11。
+
